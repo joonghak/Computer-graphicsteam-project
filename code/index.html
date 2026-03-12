@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Boxing Game</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <style>
+    body { 
+      margin: 0; 
+      font-family: Arial, sans-serif;
+      background: #000000;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .scene {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease;
+    }
+    .scene.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #menu-scene {
+      background: linear-gradient(to bottom, #000000, #1a1a1a);
+    }
+    .menu-title {
+      font-size: 3em;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      margin-bottom: 40px;
+    }
+    .menu-button {
+      background: #ffd700;
+      color: #000;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.2em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 10px;
+    }
+    .menu-button:hover {
+      background: #ffed4a;
+      transform: scale(1.05);
+    }
+    #game-scene {
+      background: #000000;
+    }
+    #game-ui {
+      background: rgba(0,0,0,0.9);
+      padding: 5px;
+      box-sizing: border-box;
+      pointer-events: none;
+      z-index: 100;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .player-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+      height: 100%;
+    }
+    .player {
+      background: rgba(0,0,0,0.9);
+      padding: 5px;
+      border-radius: 4px;
+      width: 35%;
+      display: flex;
+      flex-direction: column;
+    }
+    .player h2 {
+      margin: 0 0 3px 0;
+      color: #ffd700;
+      font-size: 0.9em;
+    }
+    .health-bar {
+      width: 100%;
+      height: 12px;
+      background: #333;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .health-fill {
+      height: 100%;
+      background: #ff4444;
+      transition: width 0.3s ease;
+    }
+    .round-symbols {
+      display: flex;
+      gap: 8px;
+      margin-top: 3px;
+    }
+    #player1 .round-symbols {
+      justify-content: flex-end;
+    }
+    #player2 .round-symbols {
+      justify-content: flex-start;
+    }
+    .round-symbol {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #333;
+      border: 1px solid #444;
+      transition: all 0.3s ease;
+    }
+    .round-symbol.won {
+      background: #ffd700;
+      box-shadow: 0 0 5px #ffd700;
+    }
+    .game-info {
+      text-align: center;
+      margin: 0 10px;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .timer {
+      font-size: 1.2em;
+      color: #ffd700;
+      margin: 0;
+      font-weight: bold;
+    }
+    .round-info {
+      font-size: 0.9em;
+      color: #fff;
+      margin: 0;
+    }
+    #game-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #000000;
+    }
+    canvas { 
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .result {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+      z-index: 1000;
+    }
+    .result h2 {
+      color: #ffd700;
+      margin: 0 0 15px 0;
+      font-size: 1.5em;
+    }
+    .result button {
+      background: #ffd700;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      pointer-events: auto;
+      transition: all 0.3s ease;
+    }
+    .result button:hover {
+      background: #ffed4a;
+      transform: scale(1.05);
+    }
+    .countdown {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 4em;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      display: none;
+      z-index: 1000;
+    }
+    .countdown.fight {
+      font-size: 5em;
+      animation: fightAnimation 1s ease-out;
+    }
+    @keyframes fightAnimation {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+    #settings-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+      z-index: 1000;
+    }
+    #settings-button:hover {
+      background-color: rgba(255, 255, 255, 1);
+    }
+    #settings-button img {
+      width: 24px;
+      height: 24px;
+    }
+    #day-night-button {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: rgba(255, 255, 255, 0.8);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+      z-index: 1000;
+    }
+    #day-night-button:hover {
+      background-color: rgba(255, 255, 255, 1);
+    }
+    #day-night-button img {
+      width: 24px;
+      height: 24px;
+    }
+    #settings-panel {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+      transition: right 0.3s ease-in-out;
+      z-index: 999;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    #settings-panel.active {
+      right: 0;
+    }
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      position: sticky;
+      top: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      z-index: 1;
+    }
+    .settings-header h2 {
+      margin: 0;
+      color: #333;
+    }
+    .close-button {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    .settings-section {
+      margin-bottom: 20px;
+    }
+    .settings-section h3 {
+      color: #444;
+      margin-bottom: 10px;
+    }
+    .settings-option {
+      margin-bottom: 15px;
+    }
+    .settings-option label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+    }
+    .settings-option select,
+    .settings-option input[type="range"] {
+      width: 100%;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .value-display {
+      display: inline-block;
+      min-width: 40px;
+      text-align: right;
+      margin-left: 10px;
+      color: #666;
+    }
+    .settings-option {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .settings-option label {
+      flex: 1;
+      margin-right: 10px;
+    }
+    .settings-option input[type="range"] {
+      flex: 2;
+    }
+    .camera-controls {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 8px;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .camera-controls.active {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .camera-controls button {
+      padding: 8px 15px;
+      background: #4a4a4a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .camera-controls button:hover {
+      background: #666;
+    }
+    .camera-controls button:active {
+      transform: scale(0.95);
+    }
+    .camera-toggle {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      background: #4a4a4a;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      transition: all 0.2s ease;
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .camera-toggle:hover {
+      background: #666;
+      transform: scale(1.1);
+    }
+    .camera-toggle:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <!-- 메뉴 씬 -->
+  <div id="menu-scene" class="scene">
+    <h1 class="menu-title">Boxing Game</h1>
+    <button class="menu-button" id="start-button">Game Start</button>
+  </div>
+
+  <!-- 게임 씬 -->
+  <div id="game-scene" class="scene hidden">
+    <div id="game-ui">
+      <div class="player-info">
+        <div class="player" id="player1">
+          <h2>Player 1</h2>
+          <div class="health-bar">
+            <div class="health-fill" style="width: 100%"></div>
+          </div>
+          <div class="round-symbols">
+            <div class="round-symbol"></div>
+            <div class="round-symbol"></div>
+          </div>
+        </div>
+        <div class="game-info">
+          <div class="timer">0:00</div>
+          <div class="round-info">Round 1</div>
+        </div>
+        <div class="player" id="player2">
+          <h2>Player 2</h2>
+          <div class="health-bar">
+            <div class="health-fill" style="width: 100%"></div>
+          </div>
+          <div class="round-symbols">
+            <div class="round-symbol"></div>
+            <div class="round-symbol"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="game-container">
+      <canvas id="glcanvas"></canvas>
+    </div>
+
+    <div class="countdown" id="countdown"></div>
+
+    <div class="result" id="result">
+      <h2 id="result-text">Result</h2>
+      <button id="restart-button">Main Menu</button>
+    </div>
+
+    <div class="camera-controls">
+      <button id="mainView">Main View</button>
+      <button id="player1View">Player 1 View</button>
+      <button id="player2View">Player 2 View</button>
+      <button id="player1SideView">Player 1 Side View</button>
+      <button id="player2SideView">Player 2 Side View</button>
+      <button id="splitView">Split View</button>
+    </div>
+
+    <button class="camera-toggle" id="camera-toggle">+</button>
+  </div>
+
+  <!-- Common 유틸 로드 -->
+  <script src="./Common/MV.js"></script>
+  <script src="./Common/initShaders.js"></script>
+  <script src="./Common/initShaders2.js"></script>
+
+  <!-- 게임 매니저 -->
+  <script type="module">
+    import { GameManager } from './gameManager.js';
+    import { setGameManager } from './main.js';
+    
+    // 씬 관리
+    const menuScene = document.getElementById('menu-scene');
+    const gameScene = document.getElementById('game-scene');
+    const startButton = document.getElementById('start-button');
+    const countdownElement = document.getElementById('countdown');
+    
+    // 게임 매니저 초기화
+    let gameManager = null;
+    
+    // 메인 모듈 로딩
+    import('./main.js')
+      .then(() => {
+        console.log("main.js 로드 성공!");
+        // main.js 로드 후 시작 버튼 활성화
+        startButton.disabled = false;
+      })
+      .catch(error => {
+        console.error("main.js 로드 오류:", error);
+      });
+    
+    // 게임 시작
+    startButton.addEventListener('click', () => {
+      console.log("Start button clicked");
+      menuScene.classList.add('hidden');
+      gameScene.classList.remove('hidden');
+      
+      // 게임 매니저 초기화
+      gameManager = new GameManager();
+      setGameManager(gameManager);
+      
+      // 게임 시작
+      console.log("Starting game...");
+      gameManager.startGame();
+    });
+  </script>
+
+  <button id="settings-button">
+    <img src="./settings.png" alt="Settings">
+  </button>
+  
+  <button id="day-night-button">
+    <img src="./sun.png" alt="Day/Night Toggle">
+  </button>
+  
+  <div id="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="close-button">&times;</button>
+    </div>
+    
+    <div class="settings-section">
+      <h3>Camera</h3>
+      <div class="settings-option">
+        <label for="camera-radius">Distance from Ring</label>
+        <input type="range" id="camera-radius" min="20" max="100" value="90" step="1">
+        <span class="value-display">90.0</span>
+      </div>
+      <div class="settings-option">
+        <label for="camera-azimuth">Azimuth Angle</label>
+        <input type="range" id="camera-azimuth" min="0" max="360" value="0" step="1">
+        <span class="value-display">0°</span>
+      </div>
+      <div class="settings-option">
+        <label for="camera-elevation">Elevation Angle</label>
+        <input type="range" id="camera-elevation" min="0" max="90" value="30" step="1">
+        <span class="value-display">30°</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Main Light</h3>
+      <div class="settings-option">
+        <label for="main-light-radius">Distance from Ring</label>
+        <input type="range" id="main-light-radius" min="20" max="100" value="40" step="1">
+        <span class="value-display">40.0</span>
+      </div>
+      <div class="settings-option">
+        <label for="main-light-azimuth">Azimuth Angle</label>
+        <input type="range" id="main-light-azimuth" min="0" max="360" value="0" step="1">
+        <span class="value-display">0°</span>
+      </div>
+      <div class="settings-option">
+        <label for="main-light-elevation">Elevation Angle</label>
+        <input type="range" id="main-light-elevation" min="0" max="90" value="45" step="1">
+        <span class="value-display">45°</span>
+      </div>
+      <div class="settings-option">
+        <label for="main-light-intensity">Intensity</label>
+        <input type="range" id="main-light-intensity" min="0" max="3" value="1.5" step="0.1">
+        <span class="value-display">1.5</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Spot Lights</h3>
+      <div class="settings-option">
+        <label for="red-light-intensity">Red Light Intensity</label>
+        <input type="range" id="red-light-intensity" min="0" max="3" value="1.2" step="0.1">
+        <span class="value-display">1.2</span>
+      </div>
+      <div class="settings-option">
+        <label for="blue-light-intensity">Blue Light Intensity</label>
+        <input type="range" id="blue-light-intensity" min="0" max="3" value="1.2" step="0.1">
+        <span class="value-display">1.2</span>
+      </div>
+      <div class="settings-option">
+        <label for="back-light-intensity">Back Light Intensity</label>
+        <input type="range" id="back-light-intensity" min="0" max="3" value="1.0" step="0.1">
+        <span class="value-display">1.0</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Side Camera</h3>
+      <div class="settings-option">
+        <label for="side-camera-distance">Distance</label>
+        <input type="range" id="side-camera-distance" min="5" max="100" value="25" step="1">
+        <span class="value-display">25</span>
+      </div>
+      <div class="settings-option">
+        <label for="side-camera-azimuth">Azimuth</label>
+        <input type="range" id="side-camera-azimuth" min="0" max="360" value="0" step="1">
+        <span class="value-display">0°</span>
+      </div>
+      <div class="settings-option">
+        <label for="side-camera-elevation">Elevation</label>
+        <input type="range" id="side-camera-elevation" min="-45" max="45" value="0" step="1">
+        <span class="value-display">0°</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 설정 패널 토글
+    const settingsButton = document.getElementById('settings-button');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeButton = document.querySelector('.close-button');
+    const dayNightButton = document.getElementById('day-night-button');
+    let isDayMode = true;
+
+    // Day/Night 토글 기능
+    dayNightButton.addEventListener('click', () => {
+      isDayMode = !isDayMode;
+      const buttonImg = dayNightButton.querySelector('img');
+      buttonImg.src = isDayMode ? './sun.png' : './moon.png';
+      
+      // ambient light 업데이트 이벤트 발생
+      const ambientIntensity = isDayMode ? 0.6 : 0.005;  // 더 극적인 밝기 차이
+      const event = new CustomEvent('ambientLightChanged', {
+        detail: { intensity: ambientIntensity }
+      });
+      window.dispatchEvent(event);
+    });
+
+    settingsButton.addEventListener('click', () => {
+      settingsPanel.classList.toggle('active');
+    });
+
+    closeButton.addEventListener('click', () => {
+      settingsPanel.classList.remove('active');
+    });
+
+    // 카메라 위치 업데이트 함수
+    function updateCameraPosition() {
+      const radius = parseFloat(document.getElementById('camera-radius').value);
+      const azimuth = parseFloat(document.getElementById('camera-azimuth').value) * Math.PI / 180;
+      const elevation = parseFloat(document.getElementById('camera-elevation').value) * Math.PI / 180;
+      
+      // 구면 좌표를 카르테시안 좌표로 변환
+      const x = radius * Math.cos(elevation) * Math.sin(azimuth);
+      const y = radius * Math.sin(elevation);
+      const z = radius * Math.cos(elevation) * Math.cos(azimuth);
+      
+      // 카메라 위치 업데이트 이벤트 발생
+      const event = new CustomEvent('cameraPositionChanged', {
+        detail: { x, y, z }
+      });
+      window.dispatchEvent(event);
+    }
+
+    // 메인 라이트 위치 업데이트 함수
+    function updateMainLightPosition() {
+      const radius = parseFloat(document.getElementById('main-light-radius').value);
+      const azimuth = parseFloat(document.getElementById('main-light-azimuth').value) * Math.PI / 180;
+      const elevation = parseFloat(document.getElementById('main-light-elevation').value) * Math.PI / 180;
+      
+      // 구면 좌표를 카르테시안 좌표로 변환
+      const x = radius * Math.cos(elevation) * Math.sin(azimuth);
+      const y = radius * Math.sin(elevation);
+      const z = radius * Math.cos(elevation) * Math.cos(azimuth);
+      
+      // 메인 라이트 위치 업데이트 이벤트 발생
+      const event = new CustomEvent('mainLightPositionChanged', {
+        detail: { x, y, z }
+      });
+      window.dispatchEvent(event);
+    }
+
+    // 라이트 강도 업데이트 함수
+    function updateLightIntensities() {
+      const mainIntensity = parseFloat(document.getElementById('main-light-intensity').value);
+      const redIntensity = parseFloat(document.getElementById('red-light-intensity').value);
+      const blueIntensity = parseFloat(document.getElementById('blue-light-intensity').value);
+      const backIntensity = parseFloat(document.getElementById('back-light-intensity').value);
+      
+      // 라이트 강도 업데이트 이벤트 발생
+      const event = new CustomEvent('lightIntensitiesChanged', {
+        detail: {
+          main: mainIntensity,
+          red: redIntensity,
+          blue: blueIntensity,
+          back: backIntensity
+        }
+      });
+      window.dispatchEvent(event);
+    }
+
+    // 카메라 슬라이더 이벤트 리스너
+    document.getElementById('camera-radius').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateCameraPosition();
+    });
+
+    document.getElementById('camera-azimuth').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value + '°';
+      updateCameraPosition();
+    });
+
+    document.getElementById('camera-elevation').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value + '°';
+      updateCameraPosition();
+    });
+
+    document.getElementById('main-light-radius').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateMainLightPosition();
+    });
+
+    document.getElementById('main-light-azimuth').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value + '°';
+      updateMainLightPosition();
+    });
+
+    document.getElementById('main-light-elevation').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value + '°';
+      updateMainLightPosition();
+    });
+
+    document.getElementById('main-light-intensity').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateLightIntensities();
+    });
+
+    document.getElementById('red-light-intensity').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateLightIntensities();
+    });
+
+    document.getElementById('blue-light-intensity').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateLightIntensities();
+    });
+
+    document.getElementById('back-light-intensity').addEventListener('input', (e) => {
+      e.target.nextElementSibling.textContent = e.target.value;
+      updateLightIntensities();
+    });
+
+    const cameraToggle = document.getElementById('camera-toggle');
+    const cameraControls = document.querySelector('.camera-controls');
+
+    cameraToggle.addEventListener('click', () => {
+      cameraControls.classList.toggle('active');
+      cameraToggle.textContent = cameraControls.classList.contains('active') ? '×' : '+';
+    });
+
+    // 스페이스바 이벤트 방지
+    document.addEventListener('keydown', function(e) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+      }
+    });
+
+    // 버튼 클릭 이벤트에서 스페이스바 방지
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('keydown', function(e) {
+        if (e.code === 'Space') {
+          e.preventDefault();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
